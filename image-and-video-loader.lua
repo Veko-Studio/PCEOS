@@ -1,5 +1,5 @@
 local image = [[
-    import os
+import os
 import sys
 
 # Try to import Pillow, install if not found
@@ -70,6 +70,7 @@ if __name__ == "__main__":
 local video = [[
 import os
 import sys
+import numpy as np
 
 try:
     import cv2
@@ -129,15 +130,35 @@ def process_video(filename):
         f_aa.write(f"FPS: {fps:.2f}\n")
         f_noaa.write(f"FPS: {fps:.2f}\n")
 
+        prev_frame_aa = None
+        prev_frame_noaa = None
+        noise_threshold = 10  # max pixel diff allowed to consider noise (tune as needed)
+
         frame_index = 0
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
 
+            # Resize frames
             frame_aa = resize_with_padding(frame, TARGET_SIZE, interpolation=cv2.INTER_LANCZOS4)
             frame_noaa = resize_with_padding(frame, TARGET_SIZE, interpolation=cv2.INTER_NEAREST)
 
+            # Noise reduction for AA frame
+            if prev_frame_aa is not None:
+                diff = cv2.absdiff(frame_aa, prev_frame_aa)
+                mask = np.all(diff <= noise_threshold, axis=2)
+                frame_aa[mask] = prev_frame_aa[mask]
+            prev_frame_aa = frame_aa.copy()
+
+            # Noise reduction for No AA frame
+            if prev_frame_noaa is not None:
+                diff = cv2.absdiff(frame_noaa, prev_frame_noaa)
+                mask = np.all(diff <= noise_threshold, axis=2)
+                frame_noaa[mask] = prev_frame_noaa[mask]
+            prev_frame_noaa = frame_noaa.copy()
+
+            # Write frames to files
             f_aa.write(f"--- Frame {frame_index} ---\n")
             write_frame_pixels(frame_aa, f_aa)
             f_aa.write("------\n")
@@ -163,31 +184,7 @@ if __name__ == "__main__":
 ]]
 
 local cmd = [[
-@echo off
-
-:: Check if python is available
-where python >nul 2>&1
-if errorlevel 1 (
-    echo Python not found. Installing Python...
-
-    :: Download Python installer (change URL if needed)
-    powershell -Command "Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.11.4/python-3.11.4-amd64.exe -OutFile python-installer.exe"
-
-    :: Run installer silently (customize options as needed)
-    start /wait "" python-installer.exe /quiet InstallAllUsers=1 PrependPath=1 Include_pip=1
-
-    :: Cleanup installer
-    del python-installer.exe
-
-    echo Python installed.
-) else (
-    echo Python found.
-)
-
-:: Run your python script
 python convert.py
-
-pause
 ]]
 ---
 makefolder("plane crazy")
@@ -205,7 +202,8 @@ makefolder("plane crazy/images/to not scan")
 writefile("plane crazy/images/convert.py",image)
 writefile("plane crazy/images/runpy.cmd",cmd)
 ---
-
+local sf
+local gui
 
 local LocalPlayer = game.Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
@@ -213,7 +211,7 @@ local HttpService = game:GetService("HttpService")
 local previousColors = {}
 
 local function colorsAreDifferent(c1, c2)
-	local tolerance = 0.05
+	local tolerance = 0.04
 	return math.abs(c1.R - c2.R) > tolerance
 		or math.abs(c1.G - c2.G) > tolerance
 		or math.abs(c1.B - c2.B) > tolerance
@@ -254,6 +252,7 @@ local function parseColorsFromText(text)
 	return colors
 end
 
+
 local function buildModeHandler(mode, configs)
 	if not workspace.PIayerAircraft:FindFirstChild(LocalPlayer.Name) then
 		error("Not in build mode")
@@ -275,8 +274,10 @@ local function buildModeHandler(mode, configs)
 	for _, child in zone:GetChildren() do
 		child:destroy()
 	end
-	repeat task.wait() if zone == nil then return end until #getModelList() == 51*51
+    sf.Visible = false
+	repeat task.wait(0.5) if zone == nil or gui == nil then zone:Destroy() return end until #getModelList() == 51*51
 	zone:Destroy()
+    modellist = getModelList()
 	end
 
 	if mode == "image" then
@@ -410,7 +411,6 @@ local function buildModeHandler(mode, configs)
 		end
 	end
 end
-
 ------------------------------------------------------------------------
 
 
@@ -436,6 +436,11 @@ local function getDominantColor(rgbString)
     local maxCount = 0
     local dominantColor = nil
 
+    -- Brightness calculator using luminance formula
+    local function brightness(r, g, b)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    end
+
     for r, g, b in rgbString:gmatch("(%d+),(%d+),(%d+)") do
         r, g, b = tonumber(r), tonumber(g), tonumber(b)
 
@@ -449,9 +454,20 @@ local function getDominantColor(rgbString)
         local key = r .. "," .. g .. "," .. b
         colorCount[key] = (colorCount[key] or 0) + 1
 
-        if colorCount[key] > maxCount then
-            maxCount = colorCount[key]
+        local currentCount = colorCount[key]
+        local currentBrightness = brightness(r, g, b)
+
+        if currentCount > maxCount then
+            maxCount = currentCount
             dominantColor = Color3.fromRGB(r, g, b)
+        elseif currentCount == maxCount then
+            local existingR, existingG, existingB = dominantColor.R * 255, dominantColor.G * 255, dominantColor.B * 255
+            local existingBrightness = brightness(existingR, existingG, existingB)
+
+            -- Prefer the darker color in case of tie
+            if currentBrightness < existingBrightness then
+                dominantColor = Color3.fromRGB(r, g, b)
+            end
         end
     end
 
@@ -570,7 +586,7 @@ local function DisplayColorGrid(data, pixelSize, keepRatio, shouldLoop, playOnHo
         end
         wait(0)
         task.spawn(function()
-            local delayPerFrame = 1 / 2
+            local delayPerFrame = 1 / 30
             local isHovered = not playOnHover
 
             if playOnHover then
@@ -579,17 +595,36 @@ local function DisplayColorGrid(data, pixelSize, keepRatio, shouldLoop, playOnHo
             end
             if shouldLoop then
                 if #frames <= 500 then
+                    local runService = game:GetService("RunService")
+
+                    local startTime = os.clock()
+                    local totalFrames = #frames
+                    local videoDuration = totalFrames * delayPerFrame
+
                     repeat
-                        for i = 1, #frames, 1 do
-                            if playOnHover and not isHovered then
-                                repeat wait() until not (playOnHover and not isHovered)
-                                break -- Stop the loop
+                        runService.RenderStepped:Wait()
+
+                        if playOnHover and not isHovered then
+                            -- Pause until hovered again
+                            repeat task.wait() until not (playOnHover and not isHovered)
+                            startTime = os.clock() -- Reset timer when resuming
+                        end
+
+                        local elapsedTime = os.clock() - startTime
+                        local currentFrameIndex = math.floor(elapsedTime / delayPerFrame) + 1
+
+                        if currentFrameIndex > totalFrames then
+                            if shouldLoop then
+                                startTime = os.clock()
+                                currentFrameIndex = 1
+                            else
+                                break
                             end
-                            local frame = frames[i]
-                            task.spawn(function()
-                                if isHovered then updatePixels(frame) end
-                            end)
-                            task.wait(delayPerFrame/5)
+                        end
+
+                        local frame = frames[currentFrameIndex]
+                        if frame and isHovered then
+                            updatePixels(frame)
                         end
                     until not shouldLoop
                 else
@@ -651,19 +686,48 @@ end
 
 
 -- GUI setup
-local gui = playerGui:FindFirstChild("MyScrollGui")
+gui = game:GetService("CoreGui"):FindFirstChild("MyScrollGui")
 if gui then gui:Destroy() end
 local gui = Instance.new("ScreenGui", playerGui)
 gui.Name = "MyScrollGui"
 
-local sf = Instance.new("ScrollingFrame", gui)
+sf = Instance.new("ScrollingFrame", gui)
 ---sf.Size = UDim2.new(0.2, 0, 1, 0)
 sf.Size = UDim2.new(0.5, 0, 0.2, 0)
 sf.Position = UDim2.new(0, 0, 0, 0)
-sf.BackgroundTransparency = 0.8
+sf.BackgroundTransparency = 0
 sf.BackgroundColor3 = Color3.new(0, 0, 0)
 sf.BorderSizePixel = 0
 sf.ScrollBarThickness = 0
+sf.ZIndex = 100
+sfl = Instance.new("TextLabel", gui)
+sfl.BackgroundTransparency = 1
+sfl.Size = UDim2.new(0.5, 0, 0.2, 0)
+sfl.Position = UDim2.new(0, 0, 0, 0)
+sfl.ZIndex = 200
+sfl.TextScaled = true
+sfl.Font = Enum.Font.GothamBlack
+sfl.TextColor3 = Color3.new(1,1,1)
+sfl.Text = "loading..\n\nyou may experience a lot of lag rn"
+sfl.RichText = true
+l = Instance.new("TextLabel", gui)
+l.BackgroundTransparency = 0
+l.Size = UDim2.new(0.4, 0, 0.07, 0)
+l.Position = UDim2.new(0.5-(0.4/2), 0, -0.07, 0)
+l.ZIndex = 199
+l.TextScaled = true
+l.Font = Enum.Font.GothamBlack
+l.TextColor3 = Color3.new(1,1,1)
+l.BackgroundColor3 = Color3.new(0, 0, 0)
+l.BorderSizePixel = 0
+l.Text = "press G to open/close image and video loader"
+
+gui.DisplayOrder = 99999
+gui.Parent = game:GetService("CoreGui")
+sf.Size = UDim2.new(1, 0, 1, 0)
+sfl.Size = UDim2.new(1, 0, 1, 0)
+
+
 local parentSize = sf.Parent.AbsoluteSize
 
 local widthInPixels = sf.Size.X.Scale * parentSize.X + sf.Size.X.Offset
@@ -673,7 +737,7 @@ local size = 1.5
 local xamount = 11
 
 
-local sfpix = UDim2.new(0, widthInPixels, 0, heightInPixels)
+local sfpix = UDim2.new(0, widthInPixels/1.625, 0, heightInPixels)
 local imagepix = UDim2.new(0, xamount * (55 * size), 0, 1) + UDim2.new(0, (25.5 * size), 0, (25.5 * size))
 local offsetpix = divideUDim2(sfpix-imagepix, 0.5)
 -- Load videos/images
@@ -682,7 +746,7 @@ table.insert(files, "images")
 for _, file in ipairs(listfiles("plane crazy/images/results")) do
     table.insert(files, file)
 end
-table.insert(files, "videos")
+table.insert(files, "videos [beta]")
 for _, file in ipairs(listfiles("plane crazy/videos/results")) do
     --if not file:find("badapple") then
         table.insert(files, file)
@@ -692,7 +756,24 @@ end
 local currentX = 0
 local currentY = 0
 
-for _, file in ipairs(files) do
+for i, file in ipairs(files) do
+    local dots = "..."
+    task.spawn(function()
+        while true do
+        wait(0.1)
+        dots = "."
+        wait(0.1)
+        dots = ".."
+        wait(0.1)
+        dots = ".."
+        end
+    end)
+    task.spawn(function()
+        while true do
+        wait(0)
+        sfl.Text = "loading"..dots.."\n["..tostring(i-1).."/"..tostring(#files)..']\n\n\n\n<font color="#757575">you may experience a lot of lag at this moment</font>'
+        end
+    end)
 	wait(0)
 	if file ~= "" then
 		if not isfile(file) then
@@ -733,7 +814,7 @@ for _, file in ipairs(files) do
 					local f = file:match("_([^_]+)%.txt$")
 					local g = f == "aa"
 					print(file,e,t,f,g)
-					buildModeHandler(t,{video = e, image = e, fps = 999, antialiasing = g, lagload = false})
+					buildModeHandler(t,{video = e, image = e, fps = 30, antialiasing = g, lagload = false})
 				end)
 				applyHoverTween(frame, 0.8)
 				local fileType = tostring(file):match("([^_%s]+)%.txt$") or tostring(file)
@@ -772,3 +853,13 @@ for _, file in ipairs(files) do
 		end
 	end
 end
+sfl:Destroy()
+sf.ZIndex = 1
+sf.BackgroundTransparency = 0.3
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.G then
+        sf.Visible = not sf.Visible
+    end
+end)
