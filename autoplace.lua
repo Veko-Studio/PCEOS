@@ -99,7 +99,7 @@ local function findModelAtPosition(pos: Vector3)
     if not playerAircraft then return nil end
 
     for _, model in ipairs(playerAircraft:GetChildren()) do
-        if model:IsA("Model") and model:GetPivot() then
+        if model:IsA("Model") and model.PrimaryPart then
             local modelPos = model:GetPivot().Position
             if (modelPos - pos).Magnitude < 0.001 then -- tiny tolerance to avoid float mismatch
                 return model
