@@ -190,10 +190,12 @@ function _G.placeblock(id, pos, rot)
     end
 
     local totalStart = tick()
+    local occupied = false
     timed("occupied space check", function()
-        if findModelAtPosition(getinplotposinworldspace(pos)) then return end
+        if findModelAtPosition(getinplotposinworldspace(pos)) then occupied = true end
+        print(pos,getinplotposinworldspace(pos),findModelAtPosition(getinplotposinworldspace(pos)))
     end)
-
+    if occupied then return end
     local success, result_or_error = pcall(function()
         timed("Wait for RBX active", function()
             if not isrbxactive() then
