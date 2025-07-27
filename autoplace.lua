@@ -176,34 +176,70 @@ function _G.getBlockIDFromName(name)
     end
 end
 
-function _G.placeblock(id,pos,rot)
-    local t = tick()
-    --occupied check✅
-    --force build mode✅
-    --auto selected block✅
-    --auto rotate✅
-    --auto set place pos✅
-    --auto place✅
-    --less then a second long✅
-    --no lag✅
-    --mid air placing✅
-    if findModelAtPosition(getinplotposinworldspace(pos)) then return end
+function _G.placeblock(id, pos, rot)
+    print("")
+    print("")
+    print("")
+    print("-------------------------")
+    local function timed(label, func)
+        local start = tick()
+        func()
+        task.spawn(function()
+            warn("[PCEOS]"..label .. " took", tick() - start, "s")
+        end)
+    end
+
+    local totalStart = tick()
+    timed("occupied space check", function()
+        if findModelAtPosition(getinplotposinworldspace(pos)) then return end
+    end)
+
     local success, result_or_error = pcall(function()
-        repeat task.wait() until isrbxactive()
-        buildmode()
-        setblock(id)
-        SetCameraPosition(getinplotposinworldspace(pos))
+        timed("Wait for RBX active", function()
+            if not isrbxactive() then
+                repeat task.wait() until isrbxactive()
+            end
+        end)
+        timed("modelget1", function()
+            local e = workspace.Camera.BuildObjects:FindFirstChildWhichIsA("Model")
+        end)
+        timed("Build mode and modelget2", function()
+            if (not e) or e:FindFirstChild("SelectionBoxNoPos") then
+                buildmode() task.wait(0.3)
+                e = workspace.Camera.BuildObjects:FindFirstChildWhichIsA("Model")
+            end
+        end)
+        timed("Set block", function()
+            if e and e:FindFirstChild("ID") and e:FindFirstChild("ID").Value ~= id then
+                task.spawn(function() setblock(id) end)
+            end
+        end)
         task.wait()
-        rotateblockto(workspace.Camera.BuildObjects:FindFirstChildWhichIsA("Model"), rot)
+
+        timed("Set camera", function()
+            SetCameraPosition(getinplotposinworldspace(pos))
+        end)
         task.wait()
-        task.spawn(function() runButton1Down() end)
+
+        timed("Rotate block", function()
+            rotateblockto(e, rot)
+        end)
+
+        timed("Run Button1Down", function()
+            task.spawn(runButton1Down)
+        end)
+        task.wait()
         task.wait()
         task.wait()
         task.wait()
         task.wait()
     end)
+
     print(result_or_error)
-    ResetCamera()--task.spawn(function() ResetCamera() end)
+
+    timed("Reset camera", ResetCamera)
     task.wait()
-    print("[PCEOS]placeblock() took", tick() - t, "seconds")
+
+    print("[PCEOS]placeblock() total time including the task.wait()'s:", tick() - totalStart, "seconds")
+    print("-------------------------")
 end
