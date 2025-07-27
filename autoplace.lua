@@ -220,6 +220,7 @@ function _G.placeblock(id, pos, rot)
             SetCameraPosition(getinplotposinworldspace(pos))
         end)
         task.wait()
+        task.wait()
 
         timed("Rotate block", function()
             rotateblockto(e, rot)
