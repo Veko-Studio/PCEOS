@@ -62,7 +62,7 @@ local function rotateblockto(block: Model, targetRot: Vector3)
     local function rotate90onZ() keypress(90) keyrelease(90) end -- Global Z
 
     -- Get current rotation of the model (assumes block.PrimaryPart is set)
-    local currentCF = block:GetPrimaryPartCFrame()
+    local currentCF = block:GetPivot()
     local _, currentRotY, _ = currentCF:ToEulerAnglesYXZ()
     local x, y, z = currentCF:ToOrientation()
     
@@ -99,8 +99,8 @@ local function findModelAtPosition(pos: Vector3)
     if not playerAircraft then return nil end
 
     for _, model in ipairs(playerAircraft:GetChildren()) do
-        if model:IsA("Model") and model.PrimaryPart then
-            local modelPos = model.PrimaryPart.Position
+        if model:IsA("Model") and model:GetPivot() then
+            local modelPos = model:GetPivot().Position
             if (modelPos - pos).Magnitude < 0.001 then -- tiny tolerance to avoid float mismatch
                 return model
             end
@@ -220,22 +220,17 @@ function _G.placeblock(id, pos, rot)
             SetCameraPosition(getinplotposinworldspace(pos))
         end)
         task.wait()
-        task.wait()
 
         timed("Rotate block", function()
             rotateblockto(e, rot)
         end)
+        task.wait()
 
         timed("Run Button1Down", function()
             task.spawn(runButton1Down)
         end)
-        task.wait()
-        task.wait()
-        task.wait()
-        task.wait()
-        task.wait()
+        task.wait(0.09)
     end)
-
     print(result_or_error)
 
     timed("Reset camera", ResetCamera)
