@@ -1,5 +1,5 @@
 --_G.drive_moveblock(model,pos,rot)
---
+--_G.listblocks()
 --------------------------------------
 repeat task.wait() until _G.RequestData1 ~= nil end
 repeat task.wait() until _G.RequestData2 ~= nil end
@@ -15,6 +15,9 @@ local function notify(text)
         Text = text;
         Duration = 5;
     })
+end
+local function indrivemode()
+    return workspace:FindFirstChild(LocalPlayer.Name.." Aircraft") ~= nil
 end
 --------------------------------------                                                                                                                                                                                                                                                                 1
 function _G.moveblock(model,pos,rot)
@@ -49,3 +52,10 @@ function _G.moveblock(model,pos,rot)
     end
 end
 --------------------------------------                                                                                                                                                                                                                                                                 2
+function _G.listblocks()
+    if indrivemode() then
+        return workspace:FindFirstChild(LocalPlayer.Name.." Aircraft"):GetChildren()
+    else
+        return workspace.Alrcraft:FindFirstChild(LocalPlayer.Name):GetChildren()
+    end
+end
