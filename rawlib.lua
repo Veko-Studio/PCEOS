@@ -1,9 +1,9 @@
 --_G.drive_moveblock(model,pos,rot)
 --_G.listblocks()
 --------------------------------------
-repeat task.wait() until _G.RequestData1 ~= nil end
-repeat task.wait() until _G.RequestData2 ~= nil end
-repeat task.wait() until _G.RequestData3 ~= nil end
+repeat task.wait() until _G.RequestData1 ~= nil
+repeat task.wait() until _G.RequestData2 ~= nil
+repeat task.wait() until _G.RequestData3 ~= nil
 --repeat task.wait() until _G.RequestData4 ~= nil end --4 support not there
 local LocalPlayer = game.Players.LocalPlayer
 local Zone = 
@@ -46,7 +46,7 @@ function _G.moveblock(model,pos,rot)
         local alignPosition = model.PrimaryPart:FindFirstChild("vm_1g2G_")
         alignPosition.Position = pos
         local alignRotation = model.PrimaryPart:FindFirstChild("vm_1g2G_2")
-        rot.CFrame = CFrame.Angles(rot.X,rot.Y,rot,Z)
+        alignRotation.CFrame = CFrame.Angles(rot.X,rot.Y,rot,Z)
     else
         notify("Error 1 [check gitbook for more info]")
     end
