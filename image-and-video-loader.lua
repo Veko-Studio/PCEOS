@@ -220,6 +220,33 @@ makefolder("plane crazy/images/to not scan")
 writefile("plane crazy/images/convert.py",image)
 writefile("plane crazy/images/runpy.cmd",cmd)
 ---
+local lp = game.Players.LocalPlayer
+local playeraircraft = game.Workspace.PIayerAircraft.samet_gazi
+local buildingzones = game.Workspace.BuildingZones
+local partcount = 0
+local description = "this is a description"
+local author = lp.Name
+
+local printTable = {} -- Table to store printed texts
+
+function round(n)
+    return (n + 0.5) - (n + 0.5) % 1
+end
+
+for i, v in pairs(game.Workspace.BuildingZones:GetChildren()) do
+    if v.Owner.Value ~= nil then
+        if tostring(v.Owner.Value) == lp.Name then
+            BuildZone = v
+            GridX = v.CFrame.x
+            GridY = v.CFrame.y
+            GridZ = v.CFrame.z
+            GridCenter = {x = v.CFrame.x, y = v.CFrame.y, z = v.CFrame.z}
+        end
+    end
+end
+_G.RequestData1 = {}
+_G.RequestData1[1] = BuildZone
+---
 local sf
 local gui
 
