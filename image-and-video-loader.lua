@@ -221,7 +221,6 @@ writefile("plane crazy/images/convert.py",image)
 writefile("plane crazy/images/runpy.cmd",cmd)
 ---
 local lp = game.Players.LocalPlayer
-local playeraircraft = game.Workspace.PIayerAircraft.samet_gazi
 local buildingzones = game.Workspace.BuildingZones
 local partcount = 0
 local description = "this is a description"
