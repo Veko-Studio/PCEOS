@@ -184,7 +184,25 @@ if __name__ == "__main__":
 ]]
 
 local cmd = [[
+REM Install NumPy using pip
+
+echo Checking for Python installation...
+python --version >nul 2>&1
+IF ERRORLEVEL 1 (
+    echo Python is not installed or not added to PATH.
+    echo Please install Python from https://www.python.org/downloads/
+    pause
+    exit /b
+)
+
+echo Installing NumPy...
+python -m pip install --upgrade pip
+python -m pip install numpy
+
+echo.
+echo NumPy installation complete!
 python convert.py
+pause
 ]]
 ---
 makefolder("plane crazy")
