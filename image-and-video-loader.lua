@@ -1,3 +1,28 @@
+-- List of features to check
+local features = {
+    readfile   = readfile,
+    writefile  = writefile,
+    listfiles  = listfiles,
+    metatable  = (setmetatable and getmetatable)
+}
+
+-- Flag to detect if something is missing
+local missing = false
+
+-- Loop through features and print status
+for name, fn in pairs(features) do
+    local status = fn and "🟩" or "🟥"
+    print(name .. " :", status)
+    if not fn then
+        missing = true
+    end
+end
+
+-- If anything is missing, warn the user
+if missing then
+    print("please change to executor that supports all")
+    return
+end
 local image = [[
 import os
 import sys
