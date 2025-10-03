@@ -225,7 +225,7 @@ local function showshortpreview(pos,color)
     end)
 end
 
-local function _G.placeblock(ID,origpos,cframe,config,color,material,applypivotoffset,retry)
+function _G.placeblock(ID,origpos,cframe,config,color,material,applypivotoffset,retry)
     local arguments = {ID, origpos, cframe, config, color, material, applypivotoffset,retry}
     warn("[PCEOS]placing block",ID,"at",origpos,"with the rotation of",cframe)
     pceos_mousepos = PlotVecToGlobalVec(origpos)
