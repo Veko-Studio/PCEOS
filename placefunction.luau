@@ -229,7 +229,7 @@ function _G.placeblock(ID,origpos,cframe,config,color,material,applypivotoffset,
     local arguments = {ID, origpos, cframe, config, color, material, applypivotoffset,retry}
     warn("[PCEOS]placing block",ID,"at",origpos,"with the rotation of",cframe)
     _G.pceos_mousepos = PlotVecToGlobalVec(origpos)
-    if not isPointOccupied(pceos_mousepos) then
+    if not isPointOccupied(_G.pceos_mousepos) then
         buildmode()
         if checkstatus(ID) then setblock(ID) end
         if checkstatus(ID) then setblock2(ID) end
