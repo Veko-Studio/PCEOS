@@ -87,9 +87,9 @@ if workspacemt then
                         p.Anchored = true
                         p.Color = Color3.new(1,0,0)
                     end
-                    if pceos_mousepos then
+                    if _G.pceos_mousepos then
                         newPosition = _G.pceos_mousepos-Vector3.new(0,2.5,0)
-                        workspace:FindFirstChild("PCEOS_MOUSE_OVEWRITE").Position = pceos_mousepos
+                        workspace:FindFirstChild("PCEOS_MOUSE_OVEWRITE").Position = _G.pceos_mousepos
                     end
                     -- Return a modified RaycastResult
                     return {
