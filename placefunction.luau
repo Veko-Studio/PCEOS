@@ -55,7 +55,7 @@ local function PlotVecToGlobalVec(plotvec:Vector3)
     return vec1
 end
 ---raycast overwrite setup
-local pceos_mousepos
+_G.pceos_mousepos = nil
 if workspacemt then
     setreadonly(workspacemt, false)
     local oldIndex = workspacemt.__index
@@ -88,7 +88,7 @@ if workspacemt then
                         p.Color = Color3.new(1,0,0)
                     end
                     if pceos_mousepos then
-                        newPosition = pceos_mousepos-Vector3.new(0,2.5,0)
+                        newPosition = _G.pceos_mousepos-Vector3.new(0,2.5,0)
                         workspace:FindFirstChild("PCEOS_MOUSE_OVEWRITE").Position = pceos_mousepos
                     end
                     -- Return a modified RaycastResult
@@ -228,7 +228,7 @@ end
 function _G.placeblock(ID,origpos,cframe,config,color,material,applypivotoffset,retry)
     local arguments = {ID, origpos, cframe, config, color, material, applypivotoffset,retry}
     warn("[PCEOS]placing block",ID,"at",origpos,"with the rotation of",cframe)
-    pceos_mousepos = PlotVecToGlobalVec(origpos)
+    _G.pceos_mousepos = PlotVecToGlobalVec(origpos)
     if not isPointOccupied(pceos_mousepos) then
         buildmode()
         if checkstatus(ID) then setblock(ID) end
@@ -263,21 +263,21 @@ function _G.placeblock(ID,origpos,cframe,config,color,material,applypivotoffset,
                     local rotonly = CFrame.new(Vector3.new(0, 0, 0)) * CFrame.fromMatrix(Vector3.new(), pivot:vectorToWorldSpace(Vector3.new(1,0,0)), pivot:vectorToWorldSpace(Vector3.new(0,1,0)), pivot:vectorToWorldSpace(Vector3.new(0,0,1)))
                     local offset = (rotonly * CFrame.new(g_offset)).Position
                     print("offset",offset)
-                    pceos_mousepos = pceos_mousepos-offset
+                    _G.pceos_mousepos = _G.pceos_mousepos-offset
                 end
         end
         showshortpreview(model:GetBoundingBox().Position,Color3.new(0,1,0)  )
         showshortpreview(model:GetPivot().Position      ,Color3.new(0,0.5,0))
-        showshortpreview(pceos_mousepos                 ,Color3.new(0,0,0))
-        repeat task.wait() until isrbxactive()-- and workspace.Camera.BuildObjects:FindFirstChildOfClass("Model") and (workspace.Camera.BuildObjects:FindFirstChildOfClass("Model"):GetPivot().Position - pceos_mousepos).Magnitude <= 2
+        showshortpreview(_G.pceos_mousepos                 ,Color3.new(0,0,0))
+        repeat task.wait() until isrbxactive()-- and workspace.Camera.BuildObjects:FindFirstChildOfClass("Model") and (workspace.Camera.BuildObjects:FindFirstChildOfClass("Model"):GetPivot().Position - _G.pceos_mousepos).Magnitude <= 2
         local screenSize = camera.ViewportSize
         mousemoveabs(-screenSize.X,-screenSize.Y)
         mousemoveabs(screenSize.X/2,screenSize.Y/2)
         pcall(function()game:GetService("CoreGui").DevConsoleMaster.DevConsoleWindow.Visible = false end)
         
-        local saved_pceos_mousepos = pceos_mousepos
-        pceos_mousepos = nil
-        pceos_mousepos = saved_pceos_mousepos
+        local saved_pceos_mousepos = _G.pceos_mousepos
+        _G.pceos_mousepos = nil
+        _G.pceos_mousepos = saved_pceos_mousepos
         --task.wait(0.1)
         local ac = workspace.PIayerAircraft:FindFirstChild(LocalPlayer.Name)
         local children = ac:GetChildren()
