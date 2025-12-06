@@ -239,7 +239,7 @@ local POS = Vector3.new(_G.x,_G.y,_G.z)
 Event:InvokeServer(
     POS,
     CFrame.identity,
-    ID,
+    _G.ID,
     "",
     nil,
     IDSTRINGS[ID]
