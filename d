@@ -1,5 +1,5 @@
-local size = 15
-local meshonly = false
+local size = _G.size
+local meshonly = _G.meshonly
 local configremote = game:GetService("ReplicatedStorage").Remotes.UpdateValue
 local flightmodeuiremote = game:GetService("Players")["535345h2h7ii785445"].PlayerGui.BuildGUI2.Bindables.FlightModeActivated
 local spawnremote = game:GetService("Players")["535345h2h7ii785445"].PlayerGui.BuildGui.Spawn
